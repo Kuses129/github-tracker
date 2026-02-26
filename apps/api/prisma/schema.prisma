@@ -1,0 +1,142 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+enum PrState {
+  draft
+  open
+  closed
+  merged
+}
+
+model Organization {
+  id           String       @id @default(uuid()) @db.Uuid
+  githubId     BigInt       @unique
+  login        String       @unique
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now()) @db.Timestamptz
+  updatedAt    DateTime     @updatedAt @db.Timestamptz
+  repositories Repository[]
+
+  @@map("organizations")
+}
+
+model Repository {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String        @db.Uuid
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  githubId       BigInt        @unique
+  name           String
+  isActive       Boolean       @default(true)
+  createdAt      DateTime      @default(now()) @db.Timestamptz
+  updatedAt      DateTime      @updatedAt @db.Timestamptz
+  pullRequests   PullRequest[]
+  commits        Commit[]
+
+  @@index([organizationId])
+  @@map("repositories")
+}
+
+model Contributor {
+  id           String        @id @default(uuid()) @db.Uuid
+  githubId     BigInt        @unique
+  login        String        @unique
+  createdAt    DateTime      @default(now()) @db.Timestamptz
+  updatedAt    DateTime      @updatedAt @db.Timestamptz
+  pullRequests PullRequest[]
+  prReviewers  PrReviewer[]
+  prReviews    PrReview[]
+  commits      Commit[]
+
+  @@map("contributors")
+}
+
+model PullRequest {
+  id                 String              @id @default(uuid()) @db.Uuid
+  repositoryId       String              @db.Uuid
+  repository         Repository          @relation(fields: [repositoryId], references: [id])
+  authorId           String?             @db.Uuid
+  author             Contributor?        @relation(fields: [authorId], references: [id])
+  githubId           BigInt
+  number             Int
+  title              String
+  url                String
+  state              PrState
+  additions          Int                 @default(0)
+  deletions          Int                 @default(0)
+  changedFiles       Int                 @default(0)
+  githubCreatedAt    DateTime            @db.Timestamptz
+  firstCommitAt      DateTime?           @db.Timestamptz
+  firstReviewAt      DateTime?           @db.Timestamptz
+  approvedAt         DateTime?           @db.Timestamptz
+  mergedAt           DateTime?           @db.Timestamptz
+  createdAt          DateTime            @default(now()) @db.Timestamptz
+  updatedAt          DateTime            @updatedAt @db.Timestamptz
+  prReviewers        PrReviewer[]
+  prReviews          PrReview[]
+  pullRequestCommits PullRequestCommit[]
+
+  @@unique([repositoryId, number])
+  @@index([repositoryId, mergedAt])
+  @@map("pull_requests")
+}
+
+model PrReviewer {
+  id            String      @id @default(uuid()) @db.Uuid
+  pullRequestId String      @db.Uuid
+  pullRequest   PullRequest @relation(fields: [pullRequestId], references: [id])
+  contributorId String      @db.Uuid
+  contributor   Contributor @relation(fields: [contributorId], references: [id])
+  createdAt     DateTime    @default(now()) @db.Timestamptz
+
+  @@unique([pullRequestId, contributorId])
+  @@map("pr_reviewers")
+}
+
+model PrReview {
+  id            String      @id @default(uuid()) @db.Uuid
+  pullRequestId String      @db.Uuid
+  pullRequest   PullRequest @relation(fields: [pullRequestId], references: [id])
+  reviewerId    String      @db.Uuid
+  reviewer      Contributor @relation(fields: [reviewerId], references: [id])
+  githubId      BigInt      @unique
+  state         String
+  submittedAt   DateTime    @db.Timestamptz
+  createdAt     DateTime    @default(now()) @db.Timestamptz
+
+  @@index([reviewerId, submittedAt])
+  @@map("pr_reviews")
+}
+
+model Commit {
+  id                 String              @id @default(uuid()) @db.Uuid
+  repositoryId       String              @db.Uuid
+  repository         Repository          @relation(fields: [repositoryId], references: [id])
+  authorId           String?             @db.Uuid
+  author             Contributor?        @relation(fields: [authorId], references: [id])
+  sha                String              @unique
+  message            String
+  committedAt        DateTime            @db.Timestamptz
+  createdAt          DateTime            @default(now()) @db.Timestamptz
+  pullRequestCommits PullRequestCommit[]
+
+  @@index([repositoryId, committedAt])
+  @@map("commits")
+}
+
+model PullRequestCommit {
+  id            String      @id @default(uuid()) @db.Uuid
+  pullRequestId String      @db.Uuid
+  pullRequest   PullRequest @relation(fields: [pullRequestId], references: [id])
+  commitId      String      @db.Uuid
+  commit        Commit      @relation(fields: [commitId], references: [id])
+
+  @@unique([pullRequestId, commitId])
+  @@map("pull_request_commits")
+}
