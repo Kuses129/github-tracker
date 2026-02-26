@@ -1,3 +1,19 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+
+# Turborepo
+.turbo/
+
+# Environment
+.env
+.env.local
+
+# TypeScript
+*.tsbuildinfo
+
 # OS
 .DS_Store
 Thumbs.db
@@ -11,12 +27,8 @@ Thumbs.db
 # Claude
 .claude/
 
-# Environment
-.env
-.env.*
-
 # Local config
 settings.json
 
-# Node (if applicable)
-node_modules/
+# Prisma generated
+apps/api/src/generated/
