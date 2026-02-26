@@ -3,7 +3,7 @@ import { WebhookSignatureGuard } from '../../common/guards/webhook-signature.gua
 import type { GitHubEventType } from './models/webhook-event.models';
 import { WebhooksService } from './webhooks.service';
 
-@Controller()
+@Controller('webhooks/github')
 export class WebhooksController {
   constructor(private readonly webhooksService: WebhooksService) {}
 
