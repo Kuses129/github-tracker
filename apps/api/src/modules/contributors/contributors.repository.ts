@@ -10,9 +10,9 @@ export class ContributorsRepository {
   upsert(input: ContributorProps): Promise<Contributor> {
     const githubId = BigInt(input.githubId);
     return this.prisma.contributor.upsert({
-      where: { githubId },
+      where: { login: input.login },
       create: { githubId, login: input.login },
-      update: { login: input.login },
+      update: { githubId, login: input.login },
     });
   }
 
