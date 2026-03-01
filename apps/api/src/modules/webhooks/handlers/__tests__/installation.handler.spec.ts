@@ -37,7 +37,6 @@ describe('InstallationHandler', () => {
           provide: RepositoriesService,
           useValue: {
             upsert: jest.fn().mockResolvedValue(mockRepo),
-            removeByGithubId: jest.fn().mockResolvedValue(undefined),
           },
         },
       ],
@@ -48,85 +47,34 @@ describe('InstallationHandler', () => {
     repositoriesService = module.get(RepositoriesService);
   });
 
-  describe('handleInstallation', () => {
-    it('upserts org and all repos when action is created', async () => {
-      await handler.handleInstallation({ action: 'created', installation, repositories: repoFixtures });
+  it('upserts org and all repos when action is created', async () => {
+    await handler.handle({ action: 'created', installation, repositories: repoFixtures });
 
-      expect(organizationsService.upsert).toHaveBeenCalledTimes(1);
-      expect(organizationsService.upsert).toHaveBeenCalledWith({
-        githubId: installation.account.id,
-        login: installation.account.login,
-      });
-      expect(repositoriesService.upsert).toHaveBeenCalledTimes(repoFixtures.length);
-      expect(repositoriesService.upsert).toHaveBeenCalledWith({
-        githubId: repoFixtures[0].id,
-        organizationId: mockOrg.id,
-        name: repoFixtures[0].name,
-      });
+    expect(organizationsService.upsert).toHaveBeenCalledTimes(1);
+    expect(organizationsService.upsert).toHaveBeenCalledWith({
+      githubId: installation.account.id,
+      login: installation.account.login,
     });
-
-    it('marks org inactive and does not upsert repos when action is deleted', async () => {
-      await handler.handleInstallation({ action: 'deleted', installation });
-
-      expect(organizationsService.markInactive).toHaveBeenCalledTimes(1);
-      expect(organizationsService.markInactive).toHaveBeenCalledWith(installation.account.id);
-      expect(repositoriesService.upsert).not.toHaveBeenCalled();
-    });
-
-    it('handles created action with no repositories gracefully', async () => {
-      await handler.handleInstallation({ action: 'created', installation, repositories: [] });
-
-      expect(organizationsService.upsert).toHaveBeenCalledTimes(1);
-      expect(repositoriesService.upsert).not.toHaveBeenCalled();
+    expect(repositoriesService.upsert).toHaveBeenCalledTimes(repoFixtures.length);
+    expect(repositoriesService.upsert).toHaveBeenCalledWith({
+      githubId: repoFixtures[0].id,
+      organizationId: mockOrg.id,
+      name: repoFixtures[0].name,
     });
   });
 
-  describe('handleInstallationRepositories', () => {
-    const addedRepos = [
-      { id: 3001, name: 'new-service', full_name: 'acme-org/new-service', private: false, html_url: 'https://github.com/acme-org/new-service' },
-    ];
-    const removedRepos = [
-      { id: 2001, name: 'backend', full_name: 'acme-org/backend', private: false, html_url: 'https://github.com/acme-org/backend' },
-    ];
+  it('marks org inactive and does not upsert repos when action is deleted', async () => {
+    await handler.handle({ action: 'deleted', installation });
 
-    it('upserts added repositories', async () => {
-      await handler.handleInstallationRepositories({
-        action: 'added',
-        installation,
-        repositories_added: addedRepos,
-        repositories_removed: [],
-      });
+    expect(organizationsService.markInactive).toHaveBeenCalledTimes(1);
+    expect(organizationsService.markInactive).toHaveBeenCalledWith(installation.account.id);
+    expect(repositoriesService.upsert).not.toHaveBeenCalled();
+  });
 
-      expect(repositoriesService.upsert).toHaveBeenCalledTimes(addedRepos.length);
-      expect(repositoriesService.upsert).toHaveBeenCalledWith({
-        githubId: addedRepos[0].id,
-        organizationId: mockOrg.id,
-        name: addedRepos[0].name,
-      });
-    });
+  it('handles created action with no repositories gracefully', async () => {
+    await handler.handle({ action: 'created', installation, repositories: [] });
 
-    it('removes each removed repository by github id', async () => {
-      await handler.handleInstallationRepositories({
-        action: 'removed',
-        installation,
-        repositories_added: [],
-        repositories_removed: removedRepos,
-      });
-
-      expect(repositoriesService.removeByGithubId).toHaveBeenCalledTimes(removedRepos.length);
-      expect(repositoriesService.removeByGithubId).toHaveBeenCalledWith(removedRepos[0].id);
-    });
-
-    it('handles both added and removed repos in the same payload', async () => {
-      await handler.handleInstallationRepositories({
-        action: 'added',
-        installation,
-        repositories_added: addedRepos,
-        repositories_removed: removedRepos,
-      });
-
-      expect(repositoriesService.upsert).toHaveBeenCalledTimes(addedRepos.length);
-      expect(repositoriesService.removeByGithubId).toHaveBeenCalledTimes(removedRepos.length);
-    });
+    expect(organizationsService.upsert).toHaveBeenCalledTimes(1);
+    expect(repositoriesService.upsert).not.toHaveBeenCalled();
   });
 });

@@ -1,13 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OrganizationsService } from '../../organizations/organizations.service';
 import { RepositoriesService } from '../../repositories/repositories.service';
-import type {
-  InstallationPayload,
-  InstallationRepositoriesPayload,
-} from '../models/webhook-event.models';
+import type { InstallationPayload } from '../models/webhook-event.models';
+import type { WebhookHandler } from './webhook-handler.interface';
 
 @Injectable()
-export class InstallationHandler {
+export class InstallationHandler implements WebhookHandler {
   private readonly logger = new Logger(InstallationHandler.name);
 
   constructor(
@@ -15,8 +13,9 @@ export class InstallationHandler {
     private readonly repositoriesService: RepositoriesService,
   ) {}
 
-  async handleInstallation(payload: InstallationPayload): Promise<void> {
-    const { action, installation, repositories } = payload;
+  async handle(payload: unknown): Promise<void> {
+    const { action, installation, repositories } =
+      payload as InstallationPayload;
 
     if (action === 'created') {
       const org = await this.organizationsService.upsert({
@@ -47,27 +46,6 @@ export class InstallationHandler {
         { orgLogin: installation.account.login },
         'Installation deleted',
       );
-    }
-  }
-
-  async handleInstallationRepositories(
-    payload: InstallationRepositoriesPayload,
-  ): Promise<void> {
-    const org = await this.organizationsService.upsert({
-      githubId: payload.installation.account.id,
-      login: payload.installation.account.login,
-    });
-
-    for (const repo of payload.repositories_added) {
-      await this.repositoriesService.upsert({
-        githubId: repo.id,
-        organizationId: org.id,
-        name: repo.name,
-      });
-    }
-
-    for (const repo of payload.repositories_removed) {
-      await this.repositoriesService.removeByGithubId(repo.id);
     }
   }
 }

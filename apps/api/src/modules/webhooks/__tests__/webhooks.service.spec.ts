@@ -1,5 +1,6 @@
 import type { TestingModule } from '@nestjs/testing';
 import { Test } from '@nestjs/testing';
+import { InstallationRepositoriesHandler } from '../handlers/installation-repositories.handler';
 import { InstallationHandler } from '../handlers/installation.handler';
 import { PullRequestHandler } from '../handlers/pull-request.handler';
 import { PullRequestReviewHandler } from '../handlers/pull-request-review.handler';
@@ -8,10 +9,11 @@ import { WebhooksService } from '../webhooks.service';
 
 describe('WebhooksService', () => {
   let service: WebhooksService;
-  let installationHandler: InstallationHandler;
-  let pullRequestHandler: PullRequestHandler;
-  let pullRequestReviewHandler: PullRequestReviewHandler;
-  let pushHandler: PushHandler;
+  let installationHandler: jest.Mocked<InstallationHandler>;
+  let installationRepositoriesHandler: jest.Mocked<InstallationRepositoriesHandler>;
+  let pullRequestHandler: jest.Mocked<PullRequestHandler>;
+  let pullRequestReviewHandler: jest.Mocked<PullRequestReviewHandler>;
+  let pushHandler: jest.Mocked<PushHandler>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -19,10 +21,11 @@ describe('WebhooksService', () => {
         WebhooksService,
         {
           provide: InstallationHandler,
-          useValue: {
-            handleInstallation: jest.fn().mockResolvedValue(undefined),
-            handleInstallationRepositories: jest.fn().mockResolvedValue(undefined),
-          },
+          useValue: { handle: jest.fn().mockResolvedValue(undefined) },
+        },
+        {
+          provide: InstallationRepositoriesHandler,
+          useValue: { handle: jest.fn().mockResolvedValue(undefined) },
         },
         {
           provide: PullRequestHandler,
@@ -40,22 +43,23 @@ describe('WebhooksService', () => {
     }).compile();
 
     service = module.get<WebhooksService>(WebhooksService);
-    installationHandler = module.get<InstallationHandler>(InstallationHandler);
-    pullRequestHandler = module.get<PullRequestHandler>(PullRequestHandler);
-    pullRequestReviewHandler = module.get<PullRequestReviewHandler>(PullRequestReviewHandler);
-    pushHandler = module.get<PushHandler>(PushHandler);
+    installationHandler = module.get(InstallationHandler);
+    installationRepositoriesHandler = module.get(InstallationRepositoriesHandler);
+    pullRequestHandler = module.get(PullRequestHandler);
+    pullRequestReviewHandler = module.get(PullRequestReviewHandler);
+    pushHandler = module.get(PushHandler);
   });
 
-  it('delegates "installation" to installationHandler.handleInstallation', async () => {
+  it('delegates "installation" to installationHandler.handle', async () => {
     const payload = { action: 'created', installation: { id: 1, account: { id: 10, login: 'user' } } };
     await service.route('installation', payload);
-    expect(installationHandler.handleInstallation).toHaveBeenCalledWith(payload);
+    expect(installationHandler.handle).toHaveBeenCalledWith(payload);
   });
 
-  it('delegates "installation_repositories" to installationHandler.handleInstallationRepositories', async () => {
+  it('delegates "installation_repositories" to installationRepositoriesHandler.handle', async () => {
     const payload = { action: 'added', installation: { id: 1, account: { id: 10, login: 'user' } }, repositories_added: [], repositories_removed: [] };
     await service.route('installation_repositories', payload);
-    expect(installationHandler.handleInstallationRepositories).toHaveBeenCalledWith(payload);
+    expect(installationRepositoriesHandler.handle).toHaveBeenCalledWith(payload);
   });
 
   it('delegates "pull_request" to pullRequestHandler.handle', async () => {

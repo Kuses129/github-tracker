@@ -5,9 +5,10 @@ import { PrReviewsService } from '../../pr-reviews/pr-reviews.service';
 import { PullRequestsRepository } from '../../pull-requests/pull-requests.repository';
 import { RepositoriesService } from '../../repositories/repositories.service';
 import type { PullRequestReviewPayload } from '../models/webhook-event.models';
+import type { WebhookHandler } from './webhook-handler.interface';
 
 @Injectable()
-export class PullRequestReviewHandler {
+export class PullRequestReviewHandler implements WebhookHandler {
   private readonly logger = new Logger(PullRequestReviewHandler.name);
 
   constructor(

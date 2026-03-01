@@ -4,9 +4,10 @@ import { ContributorsService } from '../../contributors/contributors.service';
 import { OrganizationsService } from '../../organizations/organizations.service';
 import { RepositoriesService } from '../../repositories/repositories.service';
 import type { PushPayload } from '../models/webhook-event.models';
+import type { WebhookHandler } from './webhook-handler.interface';
 
 @Injectable()
-export class PushHandler {
+export class PushHandler implements WebhookHandler {
   private readonly logger = new Logger(PushHandler.name);
 
   constructor(

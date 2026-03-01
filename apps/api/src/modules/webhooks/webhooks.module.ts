@@ -5,6 +5,7 @@ import { OrganizationsModule } from '../organizations/organizations.module';
 import { PrReviewsModule } from '../pr-reviews/pr-reviews.module';
 import { PullRequestsModule } from '../pull-requests/pull-requests.module';
 import { RepositoriesModule } from '../repositories/repositories.module';
+import { InstallationRepositoriesHandler } from './handlers/installation-repositories.handler';
 import { InstallationHandler } from './handlers/installation.handler';
 import { PullRequestHandler } from './handlers/pull-request.handler';
 import { PullRequestReviewHandler } from './handlers/pull-request-review.handler';
@@ -25,6 +26,7 @@ import { WebhooksService } from './webhooks.service';
   providers: [
     WebhooksService,
     InstallationHandler,
+    InstallationRepositoriesHandler,
     PullRequestHandler,
     PullRequestReviewHandler,
     PushHandler,

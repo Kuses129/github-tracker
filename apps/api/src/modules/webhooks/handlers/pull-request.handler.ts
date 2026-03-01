@@ -5,9 +5,10 @@ import { OrganizationsService } from '../../organizations/organizations.service'
 import { PullRequestsService } from '../../pull-requests/pull-requests.service';
 import { RepositoriesService } from '../../repositories/repositories.service';
 import type { PullRequestPayload } from '../models/webhook-event.models';
+import type { WebhookHandler } from './webhook-handler.interface';
 
 @Injectable()
-export class PullRequestHandler {
+export class PullRequestHandler implements WebhookHandler {
   private readonly logger = new Logger(PullRequestHandler.name);
 
   constructor(
