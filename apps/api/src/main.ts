@@ -3,7 +3,6 @@ import { NestFactory } from '@nestjs/core';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { FastifyAdapter } from '@nestjs/platform-fastify';
 import { ConfigService } from '@nestjs/config';
-import fastifyRawBody from 'fastify-raw-body';
 import { AppModule } from './app.module';
 import { configureApp } from './app.setup';
 import type { AppConfig } from './config/config.schema';
@@ -12,14 +11,8 @@ async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter({ logger: false }),
+    { rawBody: true },
   );
-
-  await app.register(fastifyRawBody, {
-    field: 'rawBody',
-    global: true,
-    encoding: false,
-    runFirst: true,
-  });
 
   configureApp(app);
 

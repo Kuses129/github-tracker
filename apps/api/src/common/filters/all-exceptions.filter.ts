@@ -1,5 +1,5 @@
 import type { ArgumentsHost, ExceptionFilter } from '@nestjs/common';
-import { Catch, HttpException, HttpStatus, Inject } from '@nestjs/common';
+import { Catch, HttpException, HttpStatus, Inject, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import type { ErrorResponse } from './models/error-response.model';
@@ -7,6 +7,7 @@ import type { AppConfig } from '../../config/config.schema';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
+  private readonly logger = new Logger(AllExceptionsFilter.name);
   private readonly headerName: string;
 
   constructor(
@@ -29,6 +30,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
       exception instanceof HttpException
         ? this.resolveMessage(exception)
         : 'Internal server error';
+
+    if (!(exception instanceof HttpException)) {
+      this.logger.error(
+        exception instanceof Error ? exception.message : exception,
+        exception instanceof Error ? exception.stack : undefined,
+      );
+    }
 
     const correlationId =
       (response.getHeader(this.headerName) as string) ?? '';
