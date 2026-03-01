@@ -35,9 +35,15 @@ export class PushHandler implements WebhookHandler {
       let authorId: string | null = null;
 
       if (commit.author.username) {
-        const author = await this.contributorsService.upsertByLogin(
-          commit.author.username,
-        );
+        const author =
+          commit.author.username === payload.sender.login
+            ? await this.contributorsService.upsert({
+                githubId: payload.sender.id,
+                login: payload.sender.login,
+              })
+            : await this.contributorsService.upsertByLogin(
+                commit.author.username,
+              );
         authorId = author.id;
       }
 

@@ -44,7 +44,10 @@ describe('PushHandler', () => {
         },
         {
           provide: ContributorsService,
-          useValue: { upsertByLogin: jest.fn().mockResolvedValue(mockAuthor) },
+          useValue: {
+            upsert: jest.fn().mockResolvedValue(mockAuthor),
+            upsertByLogin: jest.fn().mockResolvedValue(mockAuthor),
+          },
         },
         {
           provide: CommitsService,
@@ -75,15 +78,25 @@ describe('PushHandler', () => {
     expect(commitsService.upsert).toHaveBeenCalledTimes(3);
   });
 
-  it('calls contributorsService.upsertByLogin and passes authorId when commit has username', async () => {
+  it('calls contributorsService.upsert with githubId when commit author matches sender', async () => {
     const commit = makeCommit('sha-with-user', 'dev-jane');
 
     await handler.handle(buildPayload([commit]));
 
-    expect(contributorsService.upsertByLogin).toHaveBeenCalledWith('dev-jane');
+    expect(contributorsService.upsert).toHaveBeenCalledWith({ githubId: sender.id, login: sender.login });
+    expect(contributorsService.upsertByLogin).not.toHaveBeenCalled();
     expect(commitsService.upsert).toHaveBeenCalledWith(
       expect.objectContaining({ authorId: mockAuthor.id }),
     );
+  });
+
+  it('calls contributorsService.upsertByLogin when commit author differs from sender', async () => {
+    const commit = makeCommit('sha-other-user', 'dev-bob');
+
+    await handler.handle(buildPayload([commit]));
+
+    expect(contributorsService.upsertByLogin).toHaveBeenCalledWith('dev-bob');
+    expect(contributorsService.upsert).not.toHaveBeenCalledWith(expect.objectContaining({ login: 'dev-bob' }));
   });
 
   it('does not call contributorsService.upsertByLogin and passes authorId null when commit has no username', async () => {
@@ -116,7 +129,9 @@ describe('PushHandler', () => {
 
     await handler.handle(buildPayload(commits));
 
-    expect(contributorsService.upsertByLogin).toHaveBeenCalledTimes(2);
+    expect(contributorsService.upsert).toHaveBeenCalledTimes(1);
+    expect(contributorsService.upsertByLogin).toHaveBeenCalledTimes(1);
+    expect(contributorsService.upsertByLogin).toHaveBeenCalledWith('dev-bob');
     expect(commitsService.upsert).toHaveBeenCalledTimes(3);
 
     const secondCall = commitsService.upsert.mock.calls[1][0];
