@@ -1,22 +1,9 @@
-import { Drawer, List, ListItemButton, ListItemIcon, ListItemText } from '@mui/material';
+import { Box, Drawer, List, ListItemButton, ListItemIcon, ListItemText, Typography } from '@mui/material';
+import GitHubIcon from '@mui/icons-material/GitHub';
 import { useLocation, useNavigate } from 'react-router-dom';
-import DashboardIcon from '@mui/icons-material/Dashboard';
-import MergeTypeIcon from '@mui/icons-material/MergeType';
-import CommitIcon from '@mui/icons-material/Commit';
-import PeopleIcon from '@mui/icons-material/People';
-import FolderIcon from '@mui/icons-material/Folder';
-import GroupsIcon from '@mui/icons-material/Groups';
 import { SIDEBAR_COLLAPSED_WIDTH, SIDEBAR_WIDTH } from './constants';
 import { useUiStore } from '../../store/ui.store';
-
-const NAV_ITEMS = [
-  { label: 'Overview', path: '/', icon: <DashboardIcon /> },
-  { label: 'Pull Requests', path: '/pull-requests', icon: <MergeTypeIcon /> },
-  { label: 'Commits', path: '/commits', icon: <CommitIcon /> },
-  { label: 'Contributors', path: '/contributors', icon: <PeopleIcon /> },
-  { label: 'Repositories', path: '/repositories', icon: <FolderIcon /> },
-  { label: 'Teams', path: '/teams', icon: <GroupsIcon /> },
-] as const;
+import { NAV_ITEMS } from '../../config/navigation';
 
 export function Sidebar() {
   const sidebarOpen = useUiStore((s) => s.sidebarOpen);
@@ -39,7 +26,27 @@ export function Sidebar() {
         },
       }}
     >
-      <List sx={{ mt: 8 }}>
+      <Box
+        sx={{
+          height: 64,
+          display: 'flex',
+          alignItems: 'center',
+          px: 2,
+          gap: 1.5,
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+          flexShrink: 0,
+          overflow: 'hidden',
+        }}
+      >
+        <GitHubIcon sx={{ color: 'primary.main', fontSize: 24, flexShrink: 0 }} />
+        {sidebarOpen && (
+          <Typography variant="subtitle2" noWrap sx={{ color: 'text.primary', fontWeight: 700 }}>
+            GitHub Tracker
+          </Typography>
+        )}
+      </Box>
+      <List sx={{ pt: 1 }}>
         {NAV_ITEMS.map((item) => {
           const isActive =
             item.path === '/'
@@ -52,7 +59,7 @@ export function Sidebar() {
               onClick={() => navigate(item.path)}
               aria-current={isActive ? 'page' : undefined}
             >
-              <ListItemIcon>{item.icon}</ListItemIcon>
+              <ListItemIcon sx={{ minWidth: sidebarOpen ? 40 : 'auto' }}>{item.icon}</ListItemIcon>
               {sidebarOpen && <ListItemText primary={item.label} />}
             </ListItemButton>
           );

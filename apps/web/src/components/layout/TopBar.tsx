@@ -8,10 +8,10 @@ export function TopBar() {
   return (
     <AppBar position="sticky" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
       <Toolbar>
-        <IconButton color="inherit" edge="start" onClick={toggleSidebar} sx={{ mr: 2 }}>
+        <IconButton edge="start" onClick={toggleSidebar} sx={{ mr: 2, color: 'text.secondary' }}>
           <MenuIcon />
         </IconButton>
-        <Typography variant="h6" noWrap>
+        <Typography variant="h6" noWrap sx={{ color: 'text.primary' }}>
           GitHub Tracker
         </Typography>
       </Toolbar>
