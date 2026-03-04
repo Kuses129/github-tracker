@@ -22,4 +22,12 @@ export class OrganizationsRepository {
       data: { isActive: false },
     });
   }
+
+  async findAll(): Promise<Organization[]> {
+    return this.prisma.organization.findMany();
+  }
+
+  async findById(id: string): Promise<Organization | null> {
+    return this.prisma.organization.findUnique({ where: { id } });
+  }
 }

@@ -1,5 +1,13 @@
-import { Typography } from '@mui/material';
+import CommitIcon from '@mui/icons-material/Commit';
+import { ComingSoonPage } from '../components/ComingSoonPage';
 
 export function CommitsPage() {
-  return <Typography variant="h4">Commits</Typography>;
+  return (
+    <ComingSoonPage
+      title="Commits"
+      subtitle="Commit activity across your repositories"
+      description="Commit analytics will be available in a future release."
+      icon={<CommitIcon sx={{ fontSize: 40, color: 'text.disabled', mb: 1.5 }} />}
+    />
+  );
 }
