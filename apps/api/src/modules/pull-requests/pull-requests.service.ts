@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import type { PullRequest } from '../../generated/prisma';
 import type { CursorPage } from '../../common/pagination/cursor-page.response';
 import { decodeCursor, encodeCursor } from '../../common/pagination/cursor.utils';
+import { toExclusiveEndDate } from '../../common/date.utils';
 import type { PullRequestProps } from './models/pull-request.models';
 import type { PullRequestListQueryDto } from './models/pull-request-list-query.dto';
 import type { CycleTimeResponse } from './models/cycle-time.response';
@@ -36,7 +37,7 @@ export class PullRequestsService {
 
     const { items, hasMore } = await this.pullRequestsRepository.findByRepository(repoId, {
       from: query.from ? new Date(query.from) : undefined,
-      to: query.to ? new Date(query.to) : undefined,
+      to: query.to ? toExclusiveEndDate(query.to) : undefined,
       state: query.state,
       cursorDate: decoded?.date,
       cursorId: decoded?.id,
