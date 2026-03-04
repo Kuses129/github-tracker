@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { toExclusiveEndDate } from '../../common/date.utils';
 import { MetricsRepository } from './metrics.repository';
 import type { MergeFrequencyQueryDto } from './models/merge-frequency-query.dto';
 import type { MergeFrequencyResponse } from './models/merge-frequency.response';
@@ -11,7 +12,7 @@ export class MetricsService {
     const repositoryIds = query.repositories?.split(',').filter(Boolean);
     const rows = await this.metricsRepository.getMergeFrequency(
       new Date(query.from),
-      new Date(query.to),
+      toExclusiveEndDate(query.to),
       query.groupBy,
       repositoryIds,
       orgId,
