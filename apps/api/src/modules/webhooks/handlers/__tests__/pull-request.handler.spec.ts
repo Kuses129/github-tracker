@@ -6,6 +6,7 @@ import { OrganizationsService } from '../../../organizations/organizations.servi
 import { PullRequestsService } from '../../../pull-requests/pull-requests.service';
 import { RepositoriesService } from '../../../repositories/repositories.service';
 import { mockOrg, mockRepo, repository } from '../../../../test/webhook.helpers';
+import { MetricRollupService } from '../../../metrics/metric-rollup.service';
 import { PullRequestHandler } from '../pull-request.handler';
 
 const mockAuthor = { id: 'author-uuid' };
@@ -32,6 +33,7 @@ describe('PullRequestHandler', () => {
   let repositoriesService: jest.Mocked<RepositoriesService>;
   let contributorsService: jest.Mocked<ContributorsService>;
   let pullRequestsService: jest.Mocked<PullRequestsService>;
+  let metricRollupService: jest.Mocked<MetricRollupService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -53,6 +55,10 @@ describe('PullRequestHandler', () => {
           provide: PullRequestsService,
           useValue: { upsert: jest.fn().mockResolvedValue(undefined) },
         },
+        {
+          provide: MetricRollupService,
+          useValue: { upsertTodayRollupForRepo: jest.fn().mockResolvedValue(undefined) },
+        },
       ],
     }).compile();
 
@@ -61,6 +67,7 @@ describe('PullRequestHandler', () => {
     repositoriesService = module.get(RepositoriesService);
     contributorsService = module.get(ContributorsService);
     pullRequestsService = module.get(PullRequestsService);
+    metricRollupService = module.get(MetricRollupService);
   });
 
   it('calls services in order: org → repo → contributor → PR', async () => {
@@ -110,6 +117,22 @@ describe('PullRequestHandler', () => {
         mergedAt: new Date(mergedAt),
       }),
     );
+  });
+
+  it('triggers metric rollup when PR is merged', async () => {
+    await handler.handle({
+      action: 'closed',
+      pull_request: { ...basePullRequest, state: 'closed', merged: true, merged_at: '2026-01-20T14:30:00Z' },
+      repository,
+    });
+
+    expect(metricRollupService.upsertTodayRollupForRepo).toHaveBeenCalledWith(mockRepo.id, mockOrg.id);
+  });
+
+  it('does not trigger metric rollup when PR is opened', async () => {
+    await handler.handle({ action: 'opened', pull_request: basePullRequest, repository });
+
+    expect(metricRollupService.upsertTodayRollupForRepo).not.toHaveBeenCalled();
   });
 
   it('passes all PR fields to pullRequestsService.upsert', async () => {

@@ -4,4 +4,5 @@ export interface CommitProps {
   authorId: string | null;
   message: string;
   committedAt: Date;
+  backfillTaskId?: string;
 }

@@ -5,4 +5,5 @@ export interface PrReviewProps extends GitHubEntityProps {
   reviewerId: string;
   state: string;
   submittedAt: Date;
+  backfillTaskId?: string;
 }

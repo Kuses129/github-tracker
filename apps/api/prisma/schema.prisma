@@ -15,29 +15,58 @@ enum PrState {
   merged
 }
 
+enum BackfillRunStatus {
+  pending
+  discovering
+  in_progress
+  completed
+  failed
+  cancelled
+}
+
+enum BackfillTaskStatus {
+  pending
+  fetching_prs
+  enriching
+  completed
+  failed
+}
+
+enum PeriodType {
+  day
+  week
+  month
+}
+
 model Organization {
-  id           String       @id @default(uuid()) @db.Uuid
-  githubId     BigInt       @unique
-  login        String       @unique
-  isActive     Boolean      @default(true)
-  createdAt    DateTime     @default(now()) @db.Timestamptz
-  updatedAt    DateTime     @updatedAt @db.Timestamptz
-  repositories Repository[]
+  id            String         @id @default(uuid()) @db.Uuid
+  githubId      BigInt         @unique
+  login         String         @unique
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now()) @db.Timestamptz
+  updatedAt     DateTime       @updatedAt @db.Timestamptz
+  repositories  Repository[]
+  backfillRuns  BackfillRun[]
+  metricRollups MetricRollup[]
 
   @@map("organizations")
 }
 
 model Repository {
-  id             String        @id @default(uuid()) @db.Uuid
-  organizationId String        @db.Uuid
-  organization   Organization  @relation(fields: [organizationId], references: [id])
-  githubId       BigInt        @unique
-  name           String
-  isActive       Boolean       @default(true)
-  createdAt      DateTime      @default(now()) @db.Timestamptz
-  updatedAt      DateTime      @updatedAt @db.Timestamptz
-  pullRequests   PullRequest[]
-  commits        Commit[]
+  id              String          @id @default(uuid()) @db.Uuid
+  organizationId  String          @db.Uuid
+  organization    Organization    @relation(fields: [organizationId], references: [id])
+  githubId        BigInt          @unique
+  name            String
+  isActive        Boolean         @default(true)
+  backfillTaskId  String?         @db.Uuid
+  backfillTask    BackfillTask?   @relation("RepositoryBackfillTask", fields: [backfillTaskId], references: [id])
+  createdAt       DateTime        @default(now()) @db.Timestamptz
+  updatedAt       DateTime        @updatedAt @db.Timestamptz
+  pullRequests    PullRequest[]
+  commits         Commit[]
+  backfillTasks   BackfillTask[]
+  metricRollups   MetricRollup[]
 
   @@index([organizationId])
   @@map("repositories")
@@ -63,6 +92,8 @@ model PullRequest {
   repository         Repository          @relation(fields: [repositoryId], references: [id])
   authorId           String?             @db.Uuid
   author             Contributor?        @relation(fields: [authorId], references: [id])
+  backfillTaskId     String?             @db.Uuid
+  backfillTask       BackfillTask?       @relation(fields: [backfillTaskId], references: [id])
   githubId           BigInt
   number             Int
   title              String
@@ -100,15 +131,17 @@ model PrReviewer {
 }
 
 model PrReview {
-  id            String      @id @default(uuid()) @db.Uuid
-  pullRequestId String      @db.Uuid
-  pullRequest   PullRequest @relation(fields: [pullRequestId], references: [id])
-  reviewerId    String      @db.Uuid
-  reviewer      Contributor @relation(fields: [reviewerId], references: [id])
-  githubId      BigInt      @unique
-  state         String
-  submittedAt   DateTime    @db.Timestamptz
-  createdAt     DateTime    @default(now()) @db.Timestamptz
+  id             String        @id @default(uuid()) @db.Uuid
+  pullRequestId  String        @db.Uuid
+  pullRequest    PullRequest   @relation(fields: [pullRequestId], references: [id])
+  reviewerId     String        @db.Uuid
+  reviewer       Contributor   @relation(fields: [reviewerId], references: [id])
+  backfillTaskId String?       @db.Uuid
+  backfillTask   BackfillTask? @relation(fields: [backfillTaskId], references: [id])
+  githubId       BigInt        @unique
+  state          String
+  submittedAt    DateTime      @db.Timestamptz
+  createdAt      DateTime      @default(now()) @db.Timestamptz
 
   @@index([reviewerId, submittedAt])
   @@map("pr_reviews")
@@ -120,6 +153,8 @@ model Commit {
   repository         Repository          @relation(fields: [repositoryId], references: [id])
   authorId           String?             @db.Uuid
   author             Contributor?        @relation(fields: [authorId], references: [id])
+  backfillTaskId     String?             @db.Uuid
+  backfillTask       BackfillTask?       @relation(fields: [backfillTaskId], references: [id])
   sha                String              @unique
   message            String
   committedAt        DateTime            @db.Timestamptz
@@ -139,4 +174,69 @@ model PullRequestCommit {
 
   @@unique([pullRequestId, commitId])
   @@map("pull_request_commits")
+}
+
+model BackfillRun {
+  id             String            @id @default(uuid()) @db.Uuid
+  organizationId String            @db.Uuid
+  organization   Organization      @relation(fields: [organizationId], references: [id])
+  status         BackfillRunStatus @default(pending)
+  totalRepos     Int               @default(0)
+  completedRepos Int               @default(0)
+  failedRepos    Int               @default(0)
+  startedAt      DateTime?         @db.Timestamptz
+  completedAt    DateTime?         @db.Timestamptz
+  errorMessage   String?
+  createdAt      DateTime          @default(now()) @db.Timestamptz
+  updatedAt      DateTime          @updatedAt @db.Timestamptz
+  tasks          BackfillTask[]
+
+  @@index([organizationId])
+  @@index([status])
+  @@map("backfill_runs")
+}
+
+model BackfillTask {
+  id             String             @id @default(uuid()) @db.Uuid
+  backfillRunId  String             @db.Uuid
+  backfillRun    BackfillRun        @relation(fields: [backfillRunId], references: [id])
+  repositoryId   String             @db.Uuid
+  repository     Repository         @relation(fields: [repositoryId], references: [id])
+  status         BackfillTaskStatus @default(pending)
+  totalPrs       Int                @default(0)
+  processedPrs   Int                @default(0)
+  failedPrs      Int                @default(0)
+  cursor         String?
+  startedAt      DateTime?          @db.Timestamptz
+  completedAt    DateTime?          @db.Timestamptz
+  errorMessage   String?
+  createdAt      DateTime           @default(now()) @db.Timestamptz
+  updatedAt      DateTime           @updatedAt @db.Timestamptz
+  pullRequests   PullRequest[]
+  prReviews      PrReview[]
+  commits        Commit[]
+  repositories   Repository[]       @relation("RepositoryBackfillTask")
+
+  @@index([backfillRunId])
+  @@index([repositoryId])
+  @@map("backfill_tasks")
+}
+
+model MetricRollup {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  repositoryId   String?      @db.Uuid
+  repository     Repository?  @relation(fields: [repositoryId], references: [id])
+  periodType     PeriodType
+  periodStart    DateTime     @db.Date
+  metricName     String
+  value          Decimal      @db.Decimal(18, 4)
+  createdAt      DateTime     @default(now()) @db.Timestamptz
+  updatedAt      DateTime     @updatedAt @db.Timestamptz
+
+  // Unique constraint handled via partial indexes in migration (NULL-safe for optional repositoryId)
+  @@index([organizationId, repositoryId, periodType, periodStart])
+  @@index([organizationId, periodType, periodStart])
+  @@map("metric_rollups")
 }

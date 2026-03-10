@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrState } from '../../../generated/prisma';
+import { MetricRollupService } from '../../metrics/metric-rollup.service';
 import { ContributorsService } from '../../contributors/contributors.service';
 import { OrganizationsService } from '../../organizations/organizations.service';
 import { PullRequestsService } from '../../pull-requests/pull-requests.service';
@@ -16,6 +17,7 @@ export class PullRequestHandler implements WebhookHandler {
     private readonly repositoriesService: RepositoriesService,
     private readonly contributorsService: ContributorsService,
     private readonly pullRequestsService: PullRequestsService,
+    private readonly metricRollupService: MetricRollupService,
   ) {}
 
   async handle(payload: PullRequestPayload): Promise<void> {
@@ -63,6 +65,14 @@ export class PullRequestHandler implements WebhookHandler {
       },
       'Pull request upserted',
     );
+
+    if (state === PrState.merged) {
+      try {
+        await this.metricRollupService.upsertTodayRollupForRepo(repo.id, org.id);
+      } catch (err) {
+        this.logger.error({ err, repoId: repo.id, orgId: org.id }, 'Failed to upsert today rollup');
+      }
+    }
   }
 
   private mapState(payload: PullRequestPayload): PrState {

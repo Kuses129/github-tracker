@@ -1,11 +1,13 @@
 import type { TestingModule } from '@nestjs/testing';
 import { Test } from '@nestjs/testing';
+import { MetricRollupRepository } from '../metric-rollup.repository';
 import { MetricsRepository } from '../metrics.repository';
 import { MetricsService } from '../metrics.service';
 
 describe('MetricsService', () => {
   let service: MetricsService;
   let repository: jest.Mocked<MetricsRepository>;
+  let rollupRepository: jest.Mocked<MetricRollupRepository>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -17,11 +19,18 @@ describe('MetricsService', () => {
             getMergeFrequency: jest.fn(),
           },
         },
+        {
+          provide: MetricRollupRepository,
+          useValue: {
+            findMergeFrequency: jest.fn().mockResolvedValue([]),
+          },
+        },
       ],
     }).compile();
 
     service = module.get<MetricsService>(MetricsService);
     repository = module.get(MetricsRepository);
+    rollupRepository = module.get(MetricRollupRepository);
   });
 
   describe('getMergeFrequency', () => {
@@ -137,6 +146,41 @@ describe('MetricsService', () => {
         { period: '2024-01-01', count: 2 },
         { period: '2024-01-02', count: 8 },
       ]);
+    });
+
+    it('returns rollup data when orgId is provided and rollups exist', async () => {
+      rollupRepository.findMergeFrequency.mockResolvedValue([
+        { period: new Date('2024-01-15T00:00:00Z'), count: 10 },
+        { period: new Date('2024-01-16T00:00:00Z'), count: 3 },
+      ]);
+
+      const result = await service.getMergeFrequency({
+        from: '2024-01-01T00:00:00Z',
+        to: '2024-02-01T00:00:00Z',
+        groupBy: 'day',
+      }, 'org-uuid-1');
+
+      expect(result.data).toEqual([
+        { period: '2024-01-15', count: 10 },
+        { period: '2024-01-16', count: 3 },
+      ]);
+      expect(repository.getMergeFrequency).not.toHaveBeenCalled();
+    });
+
+    it('falls back to live query when orgId is provided but rollups are empty', async () => {
+      rollupRepository.findMergeFrequency.mockResolvedValue([]);
+      repository.getMergeFrequency.mockResolvedValue([
+        { period: new Date('2024-01-15T00:00:00Z'), count: BigInt(7) },
+      ]);
+
+      const result = await service.getMergeFrequency({
+        from: '2024-01-01T00:00:00Z',
+        to: '2024-02-01T00:00:00Z',
+        groupBy: 'day',
+      }, 'org-uuid-1');
+
+      expect(result.data).toEqual([{ period: '2024-01-15', count: 7 }]);
+      expect(repository.getMergeFrequency).toHaveBeenCalled();
     });
   });
 });

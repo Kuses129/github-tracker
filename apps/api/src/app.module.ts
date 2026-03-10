@@ -3,6 +3,7 @@ import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule } from './config/config.module';
 import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { BackfillModule } from './modules/backfill/backfill.module';
 import { MetricsModule } from './modules/metrics/metrics.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { PullRequestsModule } from './modules/pull-requests/pull-requests.module';
@@ -16,6 +17,7 @@ import { CorrelationIdInterceptor } from './common/interceptors/correlation-id.i
     ConfigModule,
     PrismaModule,
     HealthModule,
+    BackfillModule,
     MetricsModule,
     OrganizationsModule,
     PullRequestsModule,

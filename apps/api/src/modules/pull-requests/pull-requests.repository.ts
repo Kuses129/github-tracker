@@ -1,13 +1,22 @@
 import { Injectable } from '@nestjs/common';
 import type { PullRequest } from '../../generated/prisma';
+import type { PrismaTransactionClient } from '../../prisma/prisma.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import type { PaginatedResult } from '../../common/pagination/paginated-result';
-import type { PullRequestProps } from './models/pull-request.models';
+import type {
+  PullRequestIdAndNumber,
+  PullRequestProps,
+  PullRequestStatsUpdate,
+} from './models/pull-request.models';
 import type { PullRequestFilters } from './models/pull-request-filters.model';
 
 @Injectable()
 export class PullRequestsRepository {
   constructor(private readonly prisma: PrismaService) {}
+
+  private client(tx?: PrismaTransactionClient): PrismaTransactionClient {
+    return tx ?? this.prisma;
+  }
 
   async upsert(input: PullRequestProps): Promise<PullRequest> {
     const githubId = BigInt(input.githubId);
@@ -32,6 +41,7 @@ export class PullRequestsRepository {
         changedFiles: input.changedFiles,
         githubCreatedAt: input.githubCreatedAt,
         mergedAt: input.mergedAt,
+        ...(input.backfillTaskId && { backfillTaskId: input.backfillTaskId }),
       },
       update: {
         title: input.title,
@@ -40,6 +50,7 @@ export class PullRequestsRepository {
         deletions: input.deletions,
         changedFiles: input.changedFiles,
         mergedAt: input.mergedAt,
+        ...(input.backfillTaskId && { backfillTaskId: input.backfillTaskId }),
       },
     });
   }
@@ -95,6 +106,27 @@ export class PullRequestsRepository {
 
     const hasMore = rows.length > filters.limit;
     return { items: hasMore ? rows.slice(0, filters.limit) : rows, hasMore };
+  }
+
+  async findByBackfillTask(
+    repositoryId: string,
+    backfillTaskId: string,
+  ): Promise<PullRequestIdAndNumber[]> {
+    return this.prisma.pullRequest.findMany({
+      where: { repositoryId, backfillTaskId },
+      select: { id: true, number: true },
+    });
+  }
+
+  async updateStats(
+    id: string,
+    data: PullRequestStatsUpdate,
+    tx?: PrismaTransactionClient,
+  ): Promise<void> {
+    await this.client(tx).pullRequest.update({
+      where: { id },
+      data,
+    });
   }
 
   async findDetailById(prId: string): Promise<PullRequest | null> {

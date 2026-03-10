@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { CommitsModule } from '../commits/commits.module';
 import { ContributorsModule } from '../contributors/contributors.module';
+import { MetricsModule } from '../metrics/metrics.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
 import { PrReviewsModule } from '../pr-reviews/pr-reviews.module';
 import { PullRequestsModule } from '../pull-requests/pull-requests.module';
@@ -21,6 +22,7 @@ import { WebhooksService } from './webhooks.service';
     PullRequestsModule,
     PrReviewsModule,
     CommitsModule,
+    MetricsModule,
   ],
   controllers: [WebhooksController],
   providers: [
