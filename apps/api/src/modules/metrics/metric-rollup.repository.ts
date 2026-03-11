@@ -106,6 +106,8 @@ export class MetricRollupRepository {
     targetPeriodType: 'week' | 'month',
     metricName: string,
   ): Promise<void> {
+    const truncFn = targetPeriodType === 'week' ? Prisma.sql`'week'` : Prisma.sql`'month'`;
+
     await this.prisma.$executeRaw`
       INSERT INTO metric_rollups (
         id, "organizationId", "repositoryId", "periodType", "periodStart",
@@ -116,7 +118,7 @@ export class MetricRollupRepository {
         ${organizationId}::uuid,
         ${repositoryId}::uuid,
         ${targetPeriodType}::"PeriodType",
-        date_trunc(${targetPeriodType}, mr."periodStart")::date,
+        date_trunc(${truncFn}, mr."periodStart")::date,
         ${metricName},
         SUM(mr.value),
         now(),
@@ -126,7 +128,7 @@ export class MetricRollupRepository {
         AND mr."repositoryId" = ${repositoryId}::uuid
         AND mr."periodType" = 'day'::"PeriodType"
         AND mr."metricName" = ${metricName}
-      GROUP BY date_trunc(${targetPeriodType}, mr."periodStart")::date
+      GROUP BY date_trunc(${truncFn}, mr."periodStart")::date
       ON CONFLICT ("organizationId", "repositoryId", "periodType", "periodStart", "metricName")
         WHERE "repositoryId" IS NOT NULL
       DO UPDATE SET value = EXCLUDED.value, "updatedAt" = now()

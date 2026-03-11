@@ -36,8 +36,7 @@ export class DiscoverReposJob {
       });
 
       const octokit = this.gitHubClientService.getClient();
-      const githubRepos = await octokit.paginate(octokit.repos.listForOrg, {
-        org: orgLogin,
+      const githubRepos = await octokit.paginate(octokit.apps.listReposAccessibleToInstallation, {
         per_page: 100,
       });
 
@@ -61,10 +60,10 @@ export class DiscoverReposJob {
         return;
       }
 
-      const repoIdToGithubName = new Map(
+      const repoIdToGithub = new Map(
         upsertedRepos.map(repo => {
           const githubRepo = githubRepos.find(r => BigInt(r.id) === repo.githubId);
-          return [repo.id, githubRepo?.name];
+          return [repo.id, { name: githubRepo?.name, owner: githubRepo?.owner?.login }] as const;
         }),
       );
 
@@ -82,9 +81,9 @@ export class DiscoverReposJob {
 
       await Promise.all(
         tasks.map(task => {
-          const repoName = repoIdToGithubName.get(task.repositoryId);
-          if (!repoName) {
-            this.logger.warn({ taskId: task.id, repositoryId: task.repositoryId }, 'Could not resolve repo name, skipping task');
+          const github = repoIdToGithub.get(task.repositoryId);
+          if (!github?.name || !github.owner) {
+            this.logger.warn({ taskId: task.id, repositoryId: task.repositoryId }, 'Could not resolve repo info, skipping task');
             return;
           }
 
@@ -92,8 +91,8 @@ export class DiscoverReposJob {
             backfillRunId,
             backfillTaskId: task.id,
             repositoryId: task.repositoryId,
-            repoOwner: orgLogin,
-            repoName,
+            repoOwner: github.owner,
+            repoName: github.name,
           };
 
           return this.pgBossService.send<FetchPrsPayload>(BACKFILL_FETCH_PRS, payload);

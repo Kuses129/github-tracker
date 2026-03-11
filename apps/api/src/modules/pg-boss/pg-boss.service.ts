@@ -6,7 +6,7 @@ import type { AppConfig } from '../../config/config.schema';
 import type { QueueOptions } from 'pg-boss';
 
 const DEFAULT_RETRY_LIMIT = 3;
-const DEFAULT_EXPIRE_SECONDS = 24 * 60 * 60; // 24 hours
+const DEFAULT_EXPIRE_SECONDS = 23 * 60 * 60; // 23 hours (pg-boss v12 rejects >= 24h)
 
 @Injectable()
 export class PgBossService implements OnModuleInit, OnModuleDestroy {
